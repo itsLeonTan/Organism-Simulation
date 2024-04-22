@@ -15,19 +15,20 @@ def overlap_check(lst, var):
 
 class Organism:
     def __init__(self, screen_width, screen_height):
-        self.image = pygame.image.load("organism.png")
-        self.image = pygame.transform.scale(self.image, (20, 20))
-        self.rect = self.image.get_rect()
-        self.rect.x = random.randint(0, screen_width - 20)
-        self.rect.y = random.randint(0, screen_height - 20)
+        self.radius = 10  # Radius of the circular organism
+        self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
         self.angle = random.randint(0, 360)  # Initial random angle
         self.step_size = 1
         self.search_radius = 50  # Radius within which to search for food
         self.closest_food = None
         self.closest_organism = None
-        self.radius_color = (0, 255, 0)  
         self.counter = 0
         self.turn_delay = 10
+
+        self.r = random.randint(99,255)
+        self.g = random.randint(99,255)
+        self.b = random.randint(99,255)
+        self.radius_color = (self.r, self.g, self.b)
 
     def movement(self, screen_width, screen_height, food_list, organism_list):
         self.closest_food = None  # Reset
@@ -84,7 +85,7 @@ class Organism:
 
 
     def draw_radius(self, screen):
-        pygame.draw.circle(screen, self.radius_color, (self.rect.x + 10, self.rect.y + 10), self.search_radius, 1)
+        pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.search_radius, 1)
 
 def generate_organism(organism_list, screen_width, screen_height):
     num_organism = 10
@@ -93,15 +94,13 @@ def generate_organism(organism_list, screen_width, screen_height):
         if overlap_check(organism_list, new_organism) == True:
             pass
         else:
-            organism_list.append(Organism(screen_width, screen_height))
+            organism_list.append(new_organism)
 
 class Food:
     def __init__(self, screen_width, screen_height):
-        self.image = pygame.image.load("food.png")
-        self.image = pygame.transform.scale(self.image, (10, 10))
-        self.rect = self.image.get_rect()
-        self.rect.x = random.randint(0, screen_width - 10)
-        self.rect.y = random.randint(0, screen_height - 10)
+        self.radius = 5  # Radius of the circular food
+        self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
+        self.radius_color = (255,0,0)
 
 def generate_food(food_list, screen_width, screen_height):
     num_food = 50
@@ -133,12 +132,12 @@ def main():
         generate_food(food_list, screen_width, screen_height)
 
         for organism in organism_list:
-            screen.blit(organism.image, organism.rect)
+            pygame.draw.circle(screen, organism.radius_color, (organism.rect.x + organism.radius, organism.rect.y + organism.radius), organism.radius)  # Draw circular organism
             organism.movement(screen_width, screen_height, food_list, organism_list)  # Move organism towards food
             organism.draw_radius(screen)  # Draw search radius around organism
 
         for food in food_list:
-            screen.blit(food.image, food.rect)
+            pygame.draw.circle(screen, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)  # Draw circular food
 
         for food in food_list:
             for organism in organism_list:
