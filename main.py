@@ -6,12 +6,60 @@ import math
 food_list = []
 organism_list = []
 
+def map_number_to_letter(number):
+    if 100 <= number <= 105:
+        return 'A'
+    elif 106 <= number <= 111:
+        return 'B'
+    elif 112 <= number <= 117:
+        return 'C'
+    elif 118 <= number <= 123:
+        return 'D'
+    elif 124 <= number <= 129:
+        return 'E'
+    elif 130 <= number <= 135:
+        return 'F'
+    elif 136 <= number <= 141:
+        return 'G'
+    elif 142 <= number <= 147:
+        return 'H'
+    elif 148 <= number <= 153:
+        return 'I'
+    elif 154 <= number <= 159:
+        return 'J'
+    elif 160 <= number <= 165:
+        return 'K'
+    elif 166 <= number <= 171:
+        return 'L'
+    elif 172 <= number <= 177:
+        return 'M'
+    elif 178 <= number <= 183:
+        return 'N'
+    elif 184 <= number <= 189:
+        return 'O'
+    elif 190 <= number <= 195:
+        return 'P'
+    elif 196 <= number <= 201:
+        return 'Q'
+    elif 202 <= number <= 207:
+        return 'R'
+    elif 208 <= number <= 213:
+        return 'S'
+    elif 214 <= number <= 219:
+        return 'T'
+    elif 220 <= number <= 225:
+        return 'U'
+    elif 226 <= number <= 231:
+        return 'V'
+    elif 232 <= number <= 237:
+        return 'W'
+    elif 238 <= number <= 243:
+        return 'X'
+    elif 244 <= number <= 249:
+        return 'Y'
+    elif 250 <= number <= 255:
+        return 'Z'
 
-def overlap_check(lst, var):
-    for existing in lst:
-        if var.rect.colliderect(existing):
-            return True
-    return False
 
 class Organism:
     def __init__(self, screen_width, screen_height):
@@ -24,11 +72,14 @@ class Organism:
         self.closest_organism = None
         self.counter = 0
         self.turn_delay = 10
+        self.food_consumed = 0  # Track food consumed
 
         self.r = random.randint(99,255)
         self.g = random.randint(99,255)
         self.b = random.randint(99,255)
         self.radius_color = (self.r, self.g, self.b)
+
+        self.name = map_number_to_letter(self.r)+map_number_to_letter(self.g)+map_number_to_letter(self.b)
 
     def movement(self, screen_width, screen_height, food_list, organism_list):
         self.closest_food = None  # Reset
@@ -83,24 +134,29 @@ class Organism:
             self.counter = 0
             self.turn_delay = random.randint(50,200)
 
-
     def draw_radius(self, screen):
         pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.search_radius, 1)
-
-def generate_organism(organism_list, screen_width, screen_height):
-    num_organism = 10
-    for _ in range(num_organism-len(organism_list)):
-        new_organism = Organism(screen_width,screen_height)
-        if overlap_check(organism_list, new_organism) == True:
-            pass
-        else:
-            organism_list.append(new_organism)
 
 class Food:
     def __init__(self, screen_width, screen_height):
         self.radius = 5  # Radius of the circular food
         self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
         self.radius_color = (255,0,0)
+
+def overlap_check(lst, var):
+    for existing in lst:
+        if var.rect.colliderect(existing):
+            return True
+    return False
+
+def generate_organism(organism_list, screen_width, screen_height):
+    num_organism = 3
+    for _ in range(num_organism-len(organism_list)):
+        new_organism = Organism(screen_width,screen_height)
+        if overlap_check(organism_list, new_organism) == True:
+            pass
+        else:
+            organism_list.append(new_organism)
 
 def generate_food(food_list, screen_width, screen_height):
     num_food = 50
@@ -112,6 +168,12 @@ def generate_food(food_list, screen_width, screen_height):
         else:
             food_list.append(new_food)
 
+def render_leaderboard(screen, font, organism_list):
+    sorted_organisms = sorted(organism_list, key=lambda x: x.food_consumed, reverse=True)
+    for i, organism in enumerate(sorted_organisms):
+        leaderboard_entry = font.render(f"{organism.name}: {organism.food_consumed} food", True, (255, 255, 255))
+        screen.blit(leaderboard_entry, (screen.get_width() - 150, 50 + i * 30))
+
 def main():
     pygame.init()
     pygame.display.set_caption("Organism Simulation")
@@ -122,6 +184,8 @@ def main():
     running = True
 
     generate_organism(organism_list, screen_width, screen_height)
+
+    font = pygame.font.Font(None, 24)
 
     while running:
         for event in pygame.event.get():
@@ -139,13 +203,13 @@ def main():
         for food in food_list:
             pygame.draw.circle(screen, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)  # Draw circular food
 
+        render_leaderboard(screen, font, organism_list)  # Render leaderboard
+
         for food in food_list:
             for organism in organism_list:
                 if organism.rect.colliderect(food.rect):
                     food_list.remove(food)
-                    # You can add score increment or other actions here
-
-
+                    organism.food_consumed += 1  # Increment food consumed
         pygame.display.flip()
         time.sleep(0.01)
 
