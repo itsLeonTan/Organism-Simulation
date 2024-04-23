@@ -84,20 +84,21 @@ class Organism:
     def movement(self, screen_width, screen_height, food_list, organism_list):
         self.closest_food = None  # Reset
         self.closest_organism = None # Reset
-        min_distance = float("inf")
+        food_min_distance = float("inf")
+        organism_min_distance = float("inf")
 
         for organism in organism_list:
             if organism != self:
                 distance = math.sqrt((self.rect.x - organism.rect.x)**2 + (self.rect.y - organism.rect.y)**2)
-                if distance < min_distance and distance <= self.search_radius:
-                    min_distance = distance
+                if distance < organism_min_distance and distance <= 20:
+                    organism_min_distance = distance
                     self.closest_organism = organism
 
         if self.closest_organism == None:
             for food in food_list:
                 distance = math.sqrt((self.rect.x - food.rect.x)**2 + (self.rect.y - food.rect.y)**2)
-                if distance < min_distance and distance <= self.search_radius:
-                    min_distance = distance
+                if distance < food_min_distance and distance <= self.search_radius:
+                    food_min_distance = distance
                     self.closest_food = food
 
         if self.closest_food != None:
@@ -107,7 +108,7 @@ class Organism:
             self.angle = math.degrees(math.atan2(dy, dx))
         
         elif self.closest_organism != None:
-            # Calculate angle towards closest food
+            # Calculate angle towards closest organism
             dx = self.rect.x - self.closest_organism.rect.x
             dy = self.rect.y - self.closest_organism.rect.y
             self.angle = math.degrees(math.atan2(dy, dx))
@@ -150,7 +151,7 @@ def overlap_check(lst, var):
     return False
 
 def generate_organism(organism_list, screen_width, screen_height):
-    num_organism = 3
+    num_organism = 10
     for _ in range(num_organism-len(organism_list)):
         new_organism = Organism(screen_width,screen_height)
         if overlap_check(organism_list, new_organism) == True:
@@ -180,7 +181,6 @@ def main():
     screen_width = 760
     screen_height = 570
     screen = pygame.display.set_mode((screen_width, screen_height))
-    screen.fill((0, 0, 0))
     running = True
 
     generate_organism(organism_list, screen_width, screen_height)
@@ -197,7 +197,7 @@ def main():
 
         for organism in organism_list:
             pygame.draw.circle(screen, organism.radius_color, (organism.rect.x + organism.radius, organism.rect.y + organism.radius), organism.radius)  # Draw circular organism
-            organism.movement(screen_width, screen_height, food_list, organism_list)  # Move organism towards food
+            organism.movement(screen_width, screen_height, food_list, organism_list)
             organism.draw_radius(screen)  # Draw search radius around organism
 
         for food in food_list:
@@ -210,6 +210,7 @@ def main():
                 if organism.rect.colliderect(food.rect):
                     food_list.remove(food)
                     organism.food_consumed += 1  # Increment food consumed
+                    break # to prevent food from being consumed twice
         pygame.display.flip()
         time.sleep(0.01)
 
