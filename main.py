@@ -1,5 +1,4 @@
 import pygame
-import time
 import random
 import math
 
@@ -63,40 +62,49 @@ def map_number_to_letter(number):
 
 class Organism:
     def __init__(self, screen_width, screen_height):
+        #Colour
+        self.r = random.randint(99, 255)
+        self.g = random.randint(99, 255)
+        self.b = random.randint(99, 255)
+        self.radius_color = (self.r, self.g, self.b)
+        #Properties
         self.radius = 10  # Radius of the circular organism
         self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
+        self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
+        self.tail_length = 50  # Number of segments in the tail
+        self.tail_segments = []  # List to store previous positions for the tail
+        #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
         self.step_size = 1
+        #Senses
         self.search_radius = 50  # Radius within which to search for food
         self.closest_food = None
         self.closest_organism = None
         self.counter = 0
         self.turn_delay = 10
         self.food_consumed = 0  # Track food consumed
-
-        self.r = random.randint(99,255)
-        self.g = random.randint(99,255)
-        self.b = random.randint(99,255)
-        self.radius_color = (self.r, self.g, self.b)
-
-        self.name = map_number_to_letter(self.r)+map_number_to_letter(self.g)+map_number_to_letter(self.b)
+        
 
     def movement(self, screen_width, screen_height, food_list, organism_list):
-        self.closest_food = None  # Reset
+        self.tail_segments.append((self.rect.x + self.radius, self.rect.y + self.radius))
+        if len(self.tail_segments) > self.tail_length:
+            self.tail_segments.pop(0)  # Limit tail length
+
+        self.closest_food = None # Reset
         self.closest_organism = None # Reset
         food_min_distance = float("inf")
         organism_min_distance = float("inf")
 
         for organism in organism_list:
             if organism != self:
-                distance = math.sqrt((self.rect.x - organism.rect.x)**2 + (self.rect.y - organism.rect.y)**2)
+                distance = math.sqrt((self.rect.x - organism.rect.x) ** 2 + (self.rect.y - organism.rect.y) ** 2)
                 if distance < organism_min_distance and distance <= 20:
                     organism_min_distance = distance
                     self.closest_organism = organism
 
         if self.closest_organism == None:
             for food in food_list:
-                distance = math.sqrt((self.rect.x - food.rect.x)**2 + (self.rect.y - food.rect.y)**2)
+                distance = math.sqrt((self.rect.x - food.rect.x) ** 2 + (self.rect.y - food.rect.y) ** 2)
                 if distance < food_min_distance and distance <= self.search_radius:
                     food_min_distance = distance
                     self.closest_food = food
@@ -119,11 +127,11 @@ class Organism:
         new_x = self.rect.x + dx
         new_y = self.rect.y + dy
 
-        if 0 <= new_x <= screen_width-self.rect.width:
+        if 0 <= new_x <= screen_width - self.rect.width:
             self.rect.x = new_x
         else:
             self.angle = 180 - self.angle
-        if 0 <= new_y <= screen_height-self.rect.height:
+        if 0 <= new_y <= screen_height - self.rect.height:
             self.rect.y = new_y
         else:
             self.angle = 360 - self.angle
@@ -131,18 +139,26 @@ class Organism:
         if self.counter < self.turn_delay:
             self.counter += 1
         elif self.counter == self.turn_delay:
-            self.angle += random.randint(-180,180)
+            self.angle += random.randint(-180, 180)
             self.counter = 0
-            self.turn_delay = random.randint(50,200)
+            self.turn_delay = random.randint(50, 200)
 
-    def draw_radius(self, screen):
-        pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.search_radius, 1)
+    def draw(self, screen):
+        for i, segment in enumerate(self.tail_segments):
+            size = i*.2
+            pygame.draw.circle(screen, self.radius_color, segment, size) # draw tail
+        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 20, self.search_radius + 20), math.radians(-self.angle-45), math.radians(-self.angle+45), 1)  # draw search radius (Search angle at 90d)
+        pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
+
+        if self.closest_food != None:
+            pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius))
 
 class Food:
     def __init__(self, screen_width, screen_height):
         self.radius = 5  # Radius of the circular food
-        self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
-        self.radius_color = (255,0,0)
+        self.rect = pygame.Rect(random.randint(0, screen_width - self.radius * 2),
+                                random.randint(0, screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
+        self.radius_color = (255, 0, 0)
 
 def overlap_check(lst, var):
     for existing in lst:
@@ -152,8 +168,8 @@ def overlap_check(lst, var):
 
 def generate_organism(organism_list, screen_width, screen_height):
     num_organism = 10
-    for _ in range(num_organism-len(organism_list)):
-        new_organism = Organism(screen_width,screen_height)
+    for _ in range(num_organism - len(organism_list)):
+        new_organism = Organism(screen_width, screen_height)
         if overlap_check(organism_list, new_organism) == True:
             pass
         else:
@@ -162,7 +178,7 @@ def generate_organism(organism_list, screen_width, screen_height):
 def generate_food(food_list, screen_width, screen_height):
     num_food = 50
 
-    for _ in range(num_food-len(food_list)):
+    for _ in range(num_food - len(food_list)):
         new_food = Food(screen_width, screen_height)
         if overlap_check(food_list, new_food) == True:
             pass
@@ -178,8 +194,8 @@ def render_leaderboard(screen, font, organism_list):
 def main():
     pygame.init()
     pygame.display.set_caption("Organism Simulation")
-    screen_width = 760
-    screen_height = 570
+    screen_width = 960
+    screen_height = 600
     screen = pygame.display.set_mode((screen_width, screen_height))
     running = True
 
@@ -196,14 +212,13 @@ def main():
         generate_food(food_list, screen_width, screen_height)
 
         for organism in organism_list:
-            pygame.draw.circle(screen, organism.radius_color, (organism.rect.x + organism.radius, organism.rect.y + organism.radius), organism.radius)  # Draw circular organism
             organism.movement(screen_width, screen_height, food_list, organism_list)
-            organism.draw_radius(screen)  # Draw search radius around organism
+            organism.draw(screen)
 
         for food in food_list:
             pygame.draw.circle(screen, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)  # Draw circular food
 
-        render_leaderboard(screen, font, organism_list)  # Render leaderboard
+        render_leaderboard(screen, font, organism_list)
 
         for food in food_list:
             for organism in organism_list:
@@ -212,7 +227,7 @@ def main():
                     organism.food_consumed += 1  # Increment food consumed
                     break # to prevent food from being consumed twice
         pygame.display.flip()
-        time.sleep(0.01)
+        pygame.time.delay(10)
 
 if __name__ == "__main__":
     main()
