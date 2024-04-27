@@ -59,7 +59,6 @@ def map_number_to_letter(number):
     elif 250 <= number <= 255:
         return 'Z'
 
-
 class Organism:
     def __init__(self, screen_width, screen_height):
         #Colour
@@ -68,22 +67,21 @@ class Organism:
         self.b = random.randint(99, 255)
         self.radius_color = (self.r, self.g, self.b)
         #Properties
-        self.radius = 10  # Radius of the circular organism
+        self.radius = 50  # Radius of the circular organism
         self.rect = pygame.Rect(random.randint(0, screen_width - self.radius*2), random.randint(0, screen_height - self.radius*2), self.radius*2, self.radius*2)
         self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
         self.tail_length = 50  # Number of segments in the tail
         self.tail_segments = []  # List to store previous positions for the tail
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
-        self.step_size = 1
+        self.step_size = 5
         #Senses
-        self.search_radius = 50  # Radius within which to search for food
+        self.search_radius = 250  # Radius within which to search for food
         self.closest_food = None
         self.closest_organism = None
         self.counter = 0
         self.turn_delay = 10
         self.food_consumed = 0  # Track food consumed
-        
 
     def movement(self, screen_width, screen_height, food_list, organism_list):
         self.tail_segments.append((self.rect.x + self.radius, self.rect.y + self.radius))
@@ -98,7 +96,7 @@ class Organism:
         for organism in organism_list:
             if organism != self:
                 distance = math.sqrt((self.rect.x - organism.rect.x) ** 2 + (self.rect.y - organism.rect.y) ** 2)
-                if distance < organism_min_distance and distance <= 20:
+                if distance < organism_min_distance and distance <=self.radius*2:
                     organism_min_distance = distance
                     self.closest_organism = organism
 
@@ -145,17 +143,17 @@ class Organism:
 
     def draw(self, screen):
         for i, segment in enumerate(self.tail_segments):
-            size = i*.2
+            size = i
             pygame.draw.circle(screen, self.radius_color, segment, size) # draw tail
-        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 20, self.search_radius + 20), math.radians(-self.angle-45), math.radians(-self.angle+45), 1)  # draw search radius (Search angle at 90d)
+        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-45), math.radians(-self.angle+45), 5)  # draw search radius (Search angle at 90d)
         pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if self.closest_food != None:
-            pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius))
+            pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
 
 class Food:
     def __init__(self, screen_width, screen_height):
-        self.radius = 5  # Radius of the circular food
+        self.radius = 25  # Radius of the circular food
         self.rect = pygame.Rect(random.randint(0, screen_width - self.radius * 2),
                                 random.randint(0, screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
         self.radius_color = (255, 0, 0)
@@ -194,29 +192,39 @@ def render_leaderboard(screen, font, organism_list):
 def main():
     pygame.init()
     pygame.display.set_caption("Organism Simulation")
-    screen_width = 960
-    screen_height = 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
-    running = True
+    base_screen_width = 960  # Original window size
+    base_screen_height = 600  # Original window size
+    scale_factor = 10  # Scale factor for pixel density
 
-    generate_organism(organism_list, screen_width, screen_height)
+    screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Original window size
+    habitat_surface = pygame.Surface((base_screen_width * scale_factor, base_screen_height * scale_factor))
+    habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
+
+    generate_organism(organism_list, base_screen_width * scale_factor, base_screen_height * scale_factor)
 
     font = pygame.font.Font(None, 24)
 
+    running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        screen.fill((0, 0, 0))
-        generate_food(food_list, screen_width, screen_height)
+        habitat_surface.fill((0, 0, 0))  # Clear the habitat surface
+
+        generate_food(food_list, base_screen_width * scale_factor, base_screen_height * scale_factor)
 
         for organism in organism_list:
-            organism.movement(screen_width, screen_height, food_list, organism_list)
-            organism.draw(screen)
+            organism.movement(base_screen_width * scale_factor, base_screen_height * scale_factor, food_list, organism_list)
+            organism.draw(habitat_surface)
 
         for food in food_list:
-            pygame.draw.circle(screen, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)  # Draw circular food
+            pygame.draw.circle(habitat_surface, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)
+
+        scaled_surface = pygame.transform.scale(habitat_surface, (base_screen_width, base_screen_height))
+
+        screen.fill((0, 0, 0))  # Clear the screen
+        screen.blit(scaled_surface, (0, 0))  # Draw the scaled surface on the screen
 
         render_leaderboard(screen, font, organism_list)
 
