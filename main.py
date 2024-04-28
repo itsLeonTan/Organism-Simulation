@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import os
 
 food_list = []
 organism_list = []
@@ -59,6 +60,13 @@ def map_number_to_letter(number):
     elif 250 <= number <= 255:
         return 'Z'
 
+def normalize_angle(angle):
+    if angle < 0:
+        angle += 360
+    elif angle >= 360:
+        angle -= 360
+    return angle
+
 class Organism:
     def __init__(self, screen_width, screen_height):
         #Colour
@@ -74,7 +82,8 @@ class Organism:
         self.tail_segments = []  # List to store previous positions for the tail
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
-        self.step_size = 5
+        self.turn = 0 # (-1: left) (0: center) (1: right)
+        self.step_size = 10
         #Senses
         self.search_radius = 250  # Radius within which to search for food
         self.closest_food = None
@@ -111,13 +120,20 @@ class Organism:
             # Calculate angle towards closest food
             dx = self.closest_food.rect.x - self.rect.x
             dy = self.closest_food.rect.y - self.rect.y
-            self.angle = math.degrees(math.atan2(dy, dx))
+            dif = normalize_angle(math.degrees(math.atan2(dy, dx))) - self.angle
+            
+            if dif < 0 and abs(dif) < 90:
+                self.turn = -1
+            elif dif > 0 and abs(dif) < 90:
+                self.turn = 1
         
         elif self.closest_organism != None:
             # Calculate angle towards closest organism
             dx = self.rect.x - self.closest_organism.rect.x
             dy = self.rect.y - self.closest_organism.rect.y
             self.angle = math.degrees(math.atan2(dy, dx))
+
+        self.angle = normalize_angle(self.angle)
 
         rad_angle = math.radians(self.angle)
         dx = self.step_size * math.cos(rad_angle)
@@ -134,12 +150,17 @@ class Organism:
         else:
             self.angle = 360 - self.angle
 
-        if self.counter < self.turn_delay:
-            self.counter += 1
-        elif self.counter == self.turn_delay:
-            self.angle += random.randint(-180, 180)
+        if self.turn == -1:
+            self.angle -= 2
+        elif self.turn == 1:
+            self.angle += 2
+        
+        if self.counter == self.turn_delay:
+            self.turn = random.randint(-1,1)
             self.counter = 0
-            self.turn_delay = random.randint(50, 200)
+            self.turn_delay = random.randint(50, 100)
+        elif self.closest_food == None and self.closest_organism == None:
+            self.counter += 1
 
     def draw(self, screen):
         for i, segment in enumerate(self.tail_segments):
@@ -194,7 +215,7 @@ def main():
     pygame.display.set_caption("Organism Simulation")
     base_screen_width = 960  # Original window size
     base_screen_height = 600  # Original window size
-    scale_factor = 10  # Scale factor for pixel density
+    scale_factor = 6  # Scale factor for pixel density
 
     screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Original window size
     habitat_surface = pygame.Surface((base_screen_width * scale_factor, base_screen_height * scale_factor))
