@@ -1,7 +1,9 @@
+import neat.population
 import pygame
 import random
 import math
 import os
+import neat
 
 food_list = []
 organism_list = []
@@ -59,6 +61,8 @@ def map_number_to_letter(number):
         return 'Y'
     elif 250 <= number <= 255:
         return 'Z'
+    else:
+        return '-'
 
 def normalize_angle(angle):
     if angle < 0:
@@ -97,6 +101,7 @@ class Organism:
         if len(self.tail_segments) > self.tail_length:
             self.tail_segments.pop(0)  # Limit tail length
 
+        global dif, food_min_distance
         self.closest_food = None # Reset
         self.closest_organism = None # Reset
         food_min_distance = float("inf")
@@ -121,13 +126,16 @@ class Organism:
             dx = self.closest_food.rect.x - self.rect.x
             dy = self.closest_food.rect.y - self.rect.y
             dif = normalize_angle(math.degrees(math.atan2(dy, dx))) - self.angle
-            
+            '''
             if dif < 0 and abs(dif) < 90:
                 self.turn = -1
             elif dif > 0 and abs(dif) < 90:
-                self.turn = 1
+                self.turn = 1 
+            '''
+        else:
+            dif = 0
         
-        elif self.closest_organism != None:
+        if self.closest_organism != None:
             # Calculate angle towards closest organism
             dx = self.rect.x - self.closest_organism.rect.x
             dy = self.rect.y - self.closest_organism.rect.y
@@ -155,12 +163,14 @@ class Organism:
         elif self.turn == 1:
             self.angle += 2
         
+        '''
         if self.counter == self.turn_delay:
             self.turn = random.randint(-1,1)
             self.counter = 0
             self.turn_delay = random.randint(50, 100)
         elif self.closest_food == None and self.closest_organism == None:
             self.counter += 1
+        '''
 
     def draw(self, screen):
         for i, segment in enumerate(self.tail_segments):
@@ -185,6 +195,7 @@ def overlap_check(lst, var):
             return True
     return False
 
+# function for testing
 def generate_organism(organism_list, screen_width, screen_height):
     num_organism = 10
     for _ in range(num_organism - len(organism_list)):
@@ -210,7 +221,96 @@ def render_leaderboard(screen, font, organism_list):
         leaderboard_entry = font.render(f"{organism.name}: {organism.food_consumed} food", True, (255, 255, 255))
         screen.blit(leaderboard_entry, (screen.get_width() - 150, 50 + i * 30))
 
-def main():
+def main(genomes, config):
+    nets = []
+    ge = []
+    organism_list = [] # clear the list
+
+    pygame.init()
+    pygame.display.set_caption("Organism Simulation")
+    base_screen_width = 960  # Original window size
+    base_screen_height = 600  # Original window size
+    scale_factor = 6  # Scale factor for pixel density
+
+    screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Original window size
+    habitat_surface = pygame.Surface((base_screen_width * scale_factor, base_screen_height * scale_factor))
+    habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
+    font = pygame.font.Font(None, 24)
+
+    for _, g in genomes:
+        net = neat.nn.FeedForwardNetwork.create(g, config)
+        nets.append(net)
+        g.fitness = 0
+        ge.append(g)
+
+        new_organism = Organism(base_screen_width * scale_factor, base_screen_height * scale_factor)
+        if overlap_check(organism_list, new_organism) == True:
+            pass
+        else:
+            organism_list.append(new_organism)
+
+    for _ in range(5000):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        habitat_surface.fill((0, 0, 0))  # Clear the habitat surface
+
+        generate_food(food_list, base_screen_width * scale_factor, base_screen_height * scale_factor)
+
+        for x, organism in enumerate(organism_list):
+            organism.movement(base_screen_width * scale_factor, base_screen_height * scale_factor, food_list, organism_list)
+            organism.draw(habitat_surface)
+
+            output = nets[x].activate((dif, food_min_distance))
+            if output[0] > 0.5:
+                organism.turn = -1
+            if output[1] > 0.5:
+                organism.turn = 0
+            if output[2] > 0.5:
+                organism.turn = 1
+
+        for food in food_list:
+            pygame.draw.circle(habitat_surface, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)
+
+        scaled_surface = pygame.transform.scale(habitat_surface, (base_screen_width, base_screen_height))
+
+        screen.fill((0, 0, 0))  # Clear the screen
+        screen.blit(scaled_surface, (0, 0))  # Draw the scaled surface on the screen
+
+        render_leaderboard(screen, font, organism_list)
+
+        for food in food_list:
+            for x, organism in enumerate(organism_list):
+                if organism.rect.colliderect(food.rect):
+                    food_list.remove(food)
+                    organism.food_consumed += 1  # Increment food consumed
+                    ge[x].fitness += 1
+                    break # to prevent food from being consumed twice
+        pygame.display.flip()
+        pygame.time.delay(10)
+
+
+def run(config_path):
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
+
+    p = neat.Population(config)
+
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+
+    winner = p.run(main,50)
+
+if __name__ == "__main__":
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "neat_config.txt")
+    run(config_path)
+
+
+#=========
+def main_test():
     pygame.init()
     pygame.display.set_caption("Organism Simulation")
     base_screen_width = 960  # Original window size
@@ -257,6 +357,3 @@ def main():
                     break # to prevent food from being consumed twice
         pygame.display.flip()
         pygame.time.delay(10)
-
-if __name__ == "__main__":
-    main()
