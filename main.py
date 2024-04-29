@@ -7,6 +7,7 @@ import neat
 
 food_list = []
 organism_list = []
+testing = False
 
 def map_number_to_letter(number):
     if 100 <= number <= 105:
@@ -87,14 +88,18 @@ class Organism:
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
         self.turn = 0 # (-1: left) (0: center) (1: right)
-        self.step_size = 10
+        self.step_size = 5
+        self.move = False
         #Senses
         self.search_radius = 250  # Radius within which to search for food
         self.closest_food = None
         self.closest_organism = None
-        self.counter = 0
-        self.turn_delay = 10
         self.food_consumed = 0  # Track food consumed
+        #====================================================
+        if testing == True:
+            self.counter = 0
+            self.turn_delay = 10
+        #====================================================
 
     def movement(self, screen_width, screen_height, food_list, organism_list):
         self.tail_segments.append((self.rect.x + self.radius, self.rect.y + self.radius))
@@ -126,12 +131,14 @@ class Organism:
             dx = self.closest_food.rect.x - self.rect.x
             dy = self.closest_food.rect.y - self.rect.y
             dif = normalize_angle(math.degrees(math.atan2(dy, dx))) - self.angle
-            '''
-            if dif < 0 and abs(dif) < 90:
-                self.turn = -1
-            elif dif > 0 and abs(dif) < 90:
-                self.turn = 1 
-            '''
+            
+            #====================================================
+            if testing == True: 
+                if dif < 0 and abs(dif) < 90:
+                    self.turn = -1
+                elif dif > 0 and abs(dif) < 90:
+                    self.turn = 1 
+            #==================================================== 
         else:
             dif = 0
         
@@ -139,15 +146,19 @@ class Organism:
             # Calculate angle towards closest organism
             dx = self.rect.x - self.closest_organism.rect.x
             dy = self.rect.y - self.closest_organism.rect.y
-            self.angle = math.degrees(math.atan2(dy, dx))
+            #self.angle = math.degrees(math.atan2(dy, dx))
 
         self.angle = normalize_angle(self.angle)
 
         rad_angle = math.radians(self.angle)
         dx = self.step_size * math.cos(rad_angle)
         dy = self.step_size * math.sin(rad_angle)
-        new_x = self.rect.x + dx
-        new_y = self.rect.y + dy
+        if self.move == True:
+            new_x = self.rect.x + dx
+            new_y = self.rect.y + dy
+        else:
+            new_x = self.rect.x
+            new_y = self.rect.y
 
         if 0 <= new_x <= screen_width - self.rect.width:
             self.rect.x = new_x
@@ -163,20 +174,22 @@ class Organism:
         elif self.turn == 1:
             self.angle += 2
         
-        '''
-        if self.counter == self.turn_delay:
-            self.turn = random.randint(-1,1)
-            self.counter = 0
-            self.turn_delay = random.randint(50, 100)
-        elif self.closest_food == None and self.closest_organism == None:
-            self.counter += 1
-        '''
+        #====================================================
+        if testing == True:
+            if self.counter == self.turn_delay:
+                self.turn = random.randint(-1,1)
+                self.counter = 0
+                self.turn_delay = random.randint(50, 100)
+            elif self.closest_food == None and self.closest_organism == None:
+                self.counter += 1
+        #====================================================
+        
 
     def draw(self, screen):
         for i, segment in enumerate(self.tail_segments):
             size = i
             pygame.draw.circle(screen, self.radius_color, segment, size) # draw tail
-        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-45), math.radians(-self.angle+45), 5)  # draw search radius (Search angle at 90d)
+        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius (Search angle at 90d)
         pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if self.closest_food != None:
@@ -195,15 +208,16 @@ def overlap_check(lst, var):
             return True
     return False
 
-# function for testing
+#====================================================
 def generate_organism(organism_list, screen_width, screen_height):
-    num_organism = 10
+    num_organism = 1
     for _ in range(num_organism - len(organism_list)):
         new_organism = Organism(screen_width, screen_height)
         if overlap_check(organism_list, new_organism) == True:
             pass
         else:
             organism_list.append(new_organism)
+#====================================================
 
 def generate_food(food_list, screen_width, screen_height):
     num_food = 50
@@ -270,6 +284,10 @@ def main(genomes, config):
                 organism.turn = 0
             if output[2] > 0.5:
                 organism.turn = 1
+            if output[3] > 0.2:
+                organism.move = False
+            else:
+                organism.move = True
 
         for food in food_list:
             pygame.draw.circle(habitat_surface, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)
@@ -301,7 +319,7 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(main,50)
+    winner = p.run(main,100)
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
@@ -309,7 +327,7 @@ if __name__ == "__main__":
     run(config_path)
 
 
-#=========
+#====================================================
 def main_test():
     pygame.init()
     pygame.display.set_caption("Organism Simulation")
@@ -357,3 +375,6 @@ def main_test():
                     break # to prevent food from being consumed twice
         pygame.display.flip()
         pygame.time.delay(10)
+
+#testing = True
+#main_test()
