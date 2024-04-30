@@ -21,6 +21,8 @@ habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
 food_list = []
 organism_list = []
 
+gen_count = 0
+
 def map_number_to_letter(number):
     if 100 <= number <= 105:
         return 'A'
@@ -99,7 +101,7 @@ class Organism:
         self.step_size = 5
         self.move = False
         #Senses
-        self.search_radius = 250  # Radius within which to search for food
+        self.search_radius = 300  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
 
@@ -110,7 +112,7 @@ class Organism:
 
         global dif, food_min_distance
         self.closest_food = None # Reset
-        food_min_distance = 999
+        food_min_distance = self.search_radius
 
         for food in food_list:
             distance = math.hypot(self.rect.x - food.rect.x, self.rect.y - food.rect.y)
@@ -124,9 +126,14 @@ class Organism:
             dy = self.closest_food.rect.y - self.rect.y
             dif = normalize_angle(math.degrees(math.atan2(dy, dx))) - self.angle
 
+            if dif > 180:
+                dif = 360-dif
+            elif dif < -180:
+                dif = 360+dif
+
             if abs(dif) > 90:
                 self.closest_food = None # Reset
-                food_min_distance = 999
+                food_min_distance = self.search_radius
                 dif = 0    
         else:
             dif = 0
@@ -165,10 +172,10 @@ class Organism:
             pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
 
 class Food:
-    def __init__(self, screen_width, screen_height):
+    def __init__(self):
         self.radius = 25  # Radius of the circular food
-        self.rect = pygame.Rect(random.randint(0, screen_width - self.radius * 2),
-                                random.randint(0, screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
+        self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius * 2),
+                                random.randint(0, habitat_screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
         self.radius_color = (255, 0, 0)
 
 def overlap_check(lst, var):
@@ -178,17 +185,19 @@ def generate_food():
     num_food = 50
 
     for _ in range(num_food - len(food_list)):
-        new_food = Food(habitat_screen_width, habitat_screen_height)
+        new_food = Food()
         if overlap_check(food_list, new_food) == True:
             pass
         else:
             food_list.append(new_food)
 
-def render_leaderboard(screen, font, organism_list):
+def render_leaderboard(screen, generation):
     sorted_organisms = sorted(organism_list, key=lambda x: x.food_consumed, reverse=True)
     for i, organism in enumerate(sorted_organisms):
         leaderboard_entry = font.render(f"{organism.name}: {organism.food_consumed} food", True, (organism.r, organism.g, organism.b))
         screen.blit(leaderboard_entry, (screen.get_width() - 150, 50 + i * 30))
+    generation_text = font.render(f"Generation: {generation}", True, (255, 255, 255))
+    screen.blit(generation_text, (screen.get_width() - 150, 20))
 
 def main(genomes, config):
     nets = []
@@ -205,6 +214,8 @@ def main(genomes, config):
         new_organism = Organism()
         organism_list.append(new_organism)
 
+        global gen_count
+
     for _ in range(5000):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -218,19 +229,17 @@ def main(genomes, config):
             organism.movement()
             organism.draw(habitat_surface)
 
-            output = nets[x].activate((dif, food_min_distance))
-            deci = output.index(max(output))
-            if max(output) == 0:
-                organism.move = False
-            elif deci == 0:
-                organism.move = True
+            output = nets[x].activate((dif/90, food_min_distance/organism.search_radius))
+            if output[0] < -0.8:
                 organism.turn = -1
-            elif deci == 1:
-                organism.move = True
-                organism.turn = 0
-            elif deci == 2:
-                organism.move = True
+            elif output[0] > 0.8:
                 organism.turn = 1
+            else:
+                organism.turn = 0
+            if output[1] > 0:
+                organism.move = True
+            else:
+                organism.move = False
             
             '''
             if x == 0:
@@ -251,9 +260,10 @@ def main(genomes, config):
         scaled_surface = pygame.transform.scale(habitat_surface, (base_screen_width, base_screen_height))
         screen.fill((0, 0, 0))  # Clear the screen
         screen.blit(scaled_surface, (0, 0))  # Draw the scaled surface on the screen
-        render_leaderboard(screen, font, organism_list)
+        render_leaderboard(screen, gen_count)
         pygame.display.flip()
         #pygame.time.delay(10)
+    gen_count += 1
 
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
