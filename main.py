@@ -20,7 +20,7 @@ habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
 
 food_list = []
 organism_list = []
-
+spawn_ground = pygame.Rect(habitat_screen_width/2 -600, habitat_screen_height/2 -600, 1200, 1200)
 gen_count = 0
 
 def map_number_to_letter(number):
@@ -91,7 +91,7 @@ class Organism:
         self.radius_color = (self.r, self.g, self.b)
         #Properties
         self.radius = 50  # Radius of the circular organism
-        self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius*2), random.randint(0, habitat_screen_height - self.radius*2), self.radius*2, self.radius*2)
+        self.rect = pygame.Rect((habitat_screen_width/2 - self.radius), (habitat_screen_height/2 - self.radius), self.radius*2, self.radius*2)
         self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
         self.tail_length = 50  # Number of segments in the tail
         self.tail_segments = []  # List to store previous positions for the tail
@@ -104,6 +104,7 @@ class Organism:
         self.search_radius = 300  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
+        self.energy = 1000
 
     def movement(self):
         self.tail_segments.append((self.rect.x + self.radius, self.rect.y + self.radius))
@@ -131,7 +132,7 @@ class Organism:
             elif dif < -180:
                 dif = 360+dif
 
-            if abs(dif) > 90:
+            if abs(dif) > 135:
                 self.closest_food = None # Reset
                 food_min_distance = self.search_radius
                 dif = 0    
@@ -165,7 +166,7 @@ class Organism:
         for i, segment in enumerate(self.tail_segments):
             size = i
             pygame.draw.circle(screen, self.radius_color, segment, size) # draw tail
-        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius (Search angle at 90d)
+        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-135), math.radians(-self.angle+135), 5)  # draw search radius (Search angle at 90d)
         pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if self.closest_food != None:
@@ -187,6 +188,8 @@ def generate_food():
     for _ in range(num_food - len(food_list)):
         new_food = Food()
         if overlap_check(food_list, new_food) == True:
+            pass
+        elif new_food.rect.colliderect(spawn_ground) == True:
             pass
         else:
             food_list.append(new_food)
@@ -222,6 +225,9 @@ def main(genomes, config):
                 pygame.quit()
                 quit()
 
+        if len(organism_list) <= 5:
+            continue
+
         habitat_surface.fill((0, 0, 0))  # Clear the habitat surface
         generate_food()
 
@@ -242,11 +248,11 @@ def main(genomes, config):
                 organism.move = False
             
             '''
-            if x == 0:
-                print("===")
-                print(organism.name)
-                for x in output:
-                    print (x)'''
+            organism.energy -= 1
+            if organism.energy < 0 and len(organism_list)> 5:
+                organism_list.pop(x)
+                nets.pop(x)
+                ge.pop(x)'''
 
         for food in food_list:
             pygame.draw.circle(habitat_surface, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)
@@ -254,6 +260,7 @@ def main(genomes, config):
                 if organism.rect.colliderect(food.rect):
                     food_list.remove(food)
                     organism.food_consumed += 1
+                    #organism.energy += 200
                     ge[x].fitness += 1
                     break # to prevent food from being consumed twice
         
