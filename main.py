@@ -4,13 +4,14 @@ import random
 import math
 import os
 import neat
+import string
 
 pygame.init()
 pygame.display.set_caption("Organism Simulation")
 font = pygame.font.Font(None, 24)
 base_screen_width = 960  # Original window size
 base_screen_height = 600  # Original window size
-scale_factor = 6  # Scale factor for pixel density
+scale_factor = 3  # Scale factor for pixel density
 habitat_screen_width = base_screen_width * scale_factor
 habitat_screen_height = base_screen_height * scale_factor
 
@@ -18,66 +19,15 @@ screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Ori
 habitat_surface = pygame.Surface((habitat_screen_width, habitat_screen_height))
 habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
 
+alphabet = list(string.ascii_uppercase)
 food_list = []
 organism_list = []
-spawn_ground = pygame.Rect(habitat_screen_width/2 -600, habitat_screen_height/2 -600, 1200, 1200)
-gen_count = 0
+gen_count = -1
 
-def map_number_to_letter(number):
-    if 100 <= number <= 105:
-        return 'A'
-    elif 106 <= number <= 111:
-        return 'B'
-    elif 112 <= number <= 117:
-        return 'C'
-    elif 118 <= number <= 123:
-        return 'D'
-    elif 124 <= number <= 129:
-        return 'E'
-    elif 130 <= number <= 135:
-        return 'F'
-    elif 136 <= number <= 141:
-        return 'G'
-    elif 142 <= number <= 147:
-        return 'H'
-    elif 148 <= number <= 153:
-        return 'I'
-    elif 154 <= number <= 159:
-        return 'J'
-    elif 160 <= number <= 165:
-        return 'K'
-    elif 166 <= number <= 171:
-        return 'L'
-    elif 172 <= number <= 177:
-        return 'M'
-    elif 178 <= number <= 183:
-        return 'N'
-    elif 184 <= number <= 189:
-        return 'O'
-    elif 190 <= number <= 195:
-        return 'P'
-    elif 196 <= number <= 201:
-        return 'Q'
-    elif 202 <= number <= 207:
-        return 'R'
-    elif 208 <= number <= 213:
-        return 'S'
-    elif 214 <= number <= 219:
-        return 'T'
-    elif 220 <= number <= 225:
-        return 'U'
-    elif 226 <= number <= 231:
-        return 'V'
-    elif 232 <= number <= 237:
-        return 'W'
-    elif 238 <= number <= 243:
-        return 'X'
-    elif 244 <= number <= 249:
-        return 'Y'
-    elif 250 <= number <= 255:
-        return 'Z'
-    else:
-        return '-'
+def map_number_to_letter(num):
+    num -= 100
+    num //= 6
+    return alphabet[num]
 
 def normalize_angle(angle):
     return angle % 360
@@ -90,18 +40,18 @@ class Organism:
         self.b = random.randint(100, 255)
         self.radius_color = (self.r, self.g, self.b)
         #Properties
-        self.radius = 50  # Radius of the circular organism
-        self.rect = pygame.Rect((habitat_screen_width/2 - self.radius), (habitat_screen_height/2 - self.radius), self.radius*2, self.radius*2)
+        self.radius = 20  # Radius of the circular organism
+        self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius*2), (habitat_screen_height/2 - self.radius), self.radius*2, self.radius*2)
         self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
-        self.tail_length = 50  # Number of segments in the tail
+        self.tail_length = 10  # Number of segments in the tail
         self.tail_segments = []  # List to store previous positions for the tail
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
         self.turn = 0 # (-1: left) (0: center) (1: right)
-        self.step_size = 5
+        self.step_size = 10
         self.move = False
         #Senses
-        self.search_radius = 300  # Radius within which to search for food
+        self.search_radius = 200  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
         self.energy = 1000
@@ -132,7 +82,7 @@ class Organism:
             elif dif < -180:
                 dif = 360+dif
 
-            if abs(dif) > 135:
+            if abs(dif) > 90:
                 self.closest_food = None # Reset
                 food_min_distance = self.search_radius
                 dif = 0    
@@ -158,38 +108,36 @@ class Organism:
                 self.angle = 360 - self.angle
 
         if self.turn == -1:
-            self.angle -= 2
+            self.angle -= 5
         elif self.turn == 1:
-            self.angle += 2
+            self.angle += 5
 
-    def draw(self, screen):
+    def draw(self):
         for i, segment in enumerate(self.tail_segments):
-            size = i
-            pygame.draw.circle(screen, self.radius_color, segment, size) # draw tail
-        pygame.draw.arc(screen, (255, 255, 255), self.rect.inflate(self.search_radius + 200, self.search_radius + 200), math.radians(-self.angle-135), math.radians(-self.angle+135), 5)  # draw search radius (Search angle at 90d)
-        pygame.draw.circle(screen, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
+            size = i*2
+            pygame.draw.circle(habitat_surface, self.radius_color, segment, size) # draw tail
+        pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if self.closest_food != None:
-            pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
+            pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
+        pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius
 
 class Food:
     def __init__(self):
-        self.radius = 25  # Radius of the circular food
+        self.radius = 10  # Radius of the circular food
         self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius * 2),
                                 random.randint(0, habitat_screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
         self.radius_color = (255, 0, 0)
 
-def overlap_check(lst, var):
-    return any(var.rect.colliderect(existing) for existing in lst)
+    def draw(self):
+        pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)        
 
 def generate_food():
     num_food = 50
 
     for _ in range(num_food - len(food_list)):
         new_food = Food()
-        if overlap_check(food_list, new_food) == True:
-            pass
-        elif new_food.rect.colliderect(spawn_ground) == True:
+        if pygame.Rect.collidelist(new_food.rect, food_list) != -1:
             pass
         else:
             food_list.append(new_food)
@@ -207,6 +155,8 @@ def main(genomes, config):
     ge = []
     organism_list.clear()
     food_list.clear()
+    global gen_count
+    gen_count += 1
 
     for _, g in genomes:
         net = neat.nn.FeedForwardNetwork.create(g, config)
@@ -217,9 +167,7 @@ def main(genomes, config):
         new_organism = Organism()
         organism_list.append(new_organism)
 
-        global gen_count
-
-    for _ in range(5000):
+    for _ in range(2000):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -233,7 +181,7 @@ def main(genomes, config):
 
         for x, organism in enumerate(organism_list):
             organism.movement()
-            organism.draw(habitat_surface)
+            organism.draw()
 
             output = nets[x].activate((dif/90, food_min_distance/organism.search_radius))
             if output[0] < -0.8:
@@ -246,6 +194,13 @@ def main(genomes, config):
                 organism.move = True
             else:
                 organism.move = False
+
+            pos = pygame.Rect.collidelist(organism.rect, food_list)
+            if pos != -1:
+                food_list.pop(pos)
+                organism.food_consumed += 1
+                #organism.energy += 200
+                ge[x].fitness += 1
             
             '''
             organism.energy -= 1
@@ -255,14 +210,7 @@ def main(genomes, config):
                 ge.pop(x)'''
 
         for food in food_list:
-            pygame.draw.circle(habitat_surface, food.radius_color, (food.rect.x + food.radius, food.rect.y + food.radius), food.radius)
-            for x, organism in enumerate(organism_list):
-                if organism.rect.colliderect(food.rect):
-                    food_list.remove(food)
-                    organism.food_consumed += 1
-                    #organism.energy += 200
-                    ge[x].fitness += 1
-                    break # to prevent food from being consumed twice
+            food.draw()
         
         scaled_surface = pygame.transform.scale(habitat_surface, (base_screen_width, base_screen_height))
         screen.fill((0, 0, 0))  # Clear the screen
@@ -270,7 +218,6 @@ def main(genomes, config):
         render_leaderboard(screen, gen_count)
         pygame.display.flip()
         #pygame.time.delay(10)
-    gen_count += 1
 
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)

@@ -64,7 +64,7 @@ weight_max_value        = 30
 weight_min_value        = -30
 weight_mutate_power     = 0.1
 weight_mutate_rate      = 0.3
-weight_replace_rate     = 0.025
+weight_replace_rate     = 0.05
 
 [DefaultSpeciesSet]
 compatibility_threshold = 3.0
@@ -75,5 +75,5 @@ max_stagnation       = 3
 species_elitism      = 2
 
 [DefaultReproduction]
-elitism            = 2
+elitism            = 3
 survival_threshold = 0.5
