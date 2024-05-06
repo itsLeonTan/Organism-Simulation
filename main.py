@@ -19,10 +19,15 @@ screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Ori
 habitat_surface = pygame.Surface((habitat_screen_width, habitat_screen_height))
 habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
 
+toggle = [True, True, True] # 0:Leaderboard 1:FOV 2:LOS
 alphabet = list(string.ascii_uppercase)
 food_list = []
 organism_list = []
 gen_count = -1
+
+menu_img = pygame.image.load("menu_button.png")
+menu_img = pygame.transform.scale(menu_img, (30, 30))
+menu = pygame.Rect(10, 10, 30, 30)
 
 def map_number_to_letter(num):
     num -= 100
@@ -118,9 +123,10 @@ class Organism:
             pygame.draw.circle(habitat_surface, self.radius_color, segment, size) # draw tail
         pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
-        if self.closest_food != None:
+        if toggle[1] == True:
+            pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius
+        if self.closest_food != None and toggle[2] == True:
             pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
-        pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius
 
 class Food:
     def __init__(self):
@@ -142,14 +148,75 @@ def generate_food():
         else:
             food_list.append(new_food)
 
-def render_leaderboard(screen, generation):
+def render_leaderboard(screen):
     sorted_organisms = sorted(organism_list, key=lambda x: x.food_consumed, reverse=True)
     for i, organism in enumerate(sorted_organisms):
         leaderboard_entry = font.render(f"{organism.name}: {organism.food_consumed} food", True, (organism.r, organism.g, organism.b))
         screen.blit(leaderboard_entry, (screen.get_width() - 150, 50 + i * 30))
-    generation_text = font.render(f"Generation: {generation}", True, (255, 255, 255))
-    screen.blit(generation_text, (screen.get_width() - 150, 20))
 
+def menu_list():
+    leaderboard = pygame.Surface((130, 30))
+    if toggle[0] == True: leaderboard.fill('green')
+    else: leaderboard.fill('red')
+    text_L = font.render("Leaderboard", True, (0, 0, 0))
+    leaderboard.blit(text_L, (10,7))
+
+    field_of_vision = pygame.Surface((130, 30))
+    if toggle[1] == True: field_of_vision.fill('green')
+    else: field_of_vision.fill('red')
+    text_FOV = font.render("Field of Vision", True, (0, 0, 0))
+    field_of_vision.blit(text_FOV, (10,7))
+
+    line_of_sight = pygame.Surface((130, 30))
+    if toggle[2] == True: line_of_sight.fill('green')
+    else: line_of_sight.fill('red')
+    text_LOS = font.render("Line of Sight", True, (0, 0, 0))
+    line_of_sight.blit(text_LOS, (10,7))
+
+    while True:
+        screen.blit(leaderboard, (50, 100))
+        screen.blit(field_of_vision, (50, 150))
+        screen.blit(line_of_sight, (50, 200))
+        screen.blit(menu_img, menu)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if menu.collidepoint(x, y):
+                    return
+                elif leaderboard.get_rect(topleft=(50,100)).collidepoint(x, y):
+                    if toggle[0] == True:
+                        toggle[0] = False
+                        leaderboard.fill('red')
+                        leaderboard.blit(text_L, (10,7))
+                    else:
+                        toggle[0] = True
+                        leaderboard.fill('green')
+                        leaderboard.blit(text_L, (10,7))
+                elif field_of_vision.get_rect(topleft=(50,150)).collidepoint(x, y):
+                    if toggle[1] == True:
+                        toggle[1] = False
+                        field_of_vision.fill('red')
+                        field_of_vision.blit(text_FOV, (10,7))
+                    else:
+                        toggle[1] = True
+                        field_of_vision.fill('green')
+                        field_of_vision.blit(text_FOV, (10,7))
+                elif line_of_sight.get_rect(topleft=(50,200)).collidepoint(x, y):
+                    if toggle[2] == True:
+                        toggle[2] = False
+                        line_of_sight.fill('red')
+                        line_of_sight.blit(text_LOS, (10,7))
+                    else:
+                        toggle[2] = True
+                        line_of_sight.fill('green')
+                        line_of_sight.blit(text_LOS, (10,7))
+                
 def main(genomes, config):
     nets = []
     ge = []
@@ -172,11 +239,16 @@ def main(genomes, config):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if menu.collidepoint(x, y):
+                    menu_list()
 
         if len(organism_list) <= 5:
             continue
 
         habitat_surface.fill((0, 0, 0))  # Clear the habitat surface
+        screen.fill((0, 0, 0))  # Clear the screen
         generate_food()
 
         for x, organism in enumerate(organism_list):
@@ -213,9 +285,13 @@ def main(genomes, config):
             food.draw()
         
         scaled_surface = pygame.transform.scale(habitat_surface, (base_screen_width, base_screen_height))
-        screen.fill((0, 0, 0))  # Clear the screen
         screen.blit(scaled_surface, (0, 0))  # Draw the scaled surface on the screen
-        render_leaderboard(screen, gen_count)
+        
+        if toggle[0] == True: render_leaderboard(screen)
+
+        screen.blit(menu_img, menu)
+        generation_text = font.render(f"Gen {gen_count}", True, (255, 255, 255))
+        screen.blit(generation_text, (20, screen.get_height() - 30))
         pygame.display.flip()
         #pygame.time.delay(10)
 
