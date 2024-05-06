@@ -19,7 +19,7 @@ screen = pygame.display.set_mode((base_screen_width, base_screen_height))  # Ori
 habitat_surface = pygame.Surface((habitat_screen_width, habitat_screen_height))
 habitat_surface.set_colorkey((0, 0, 0))  # Set transparent color
 
-toggle = [True, True, True] # 0:Leaderboard 1:FOV 2:LOS
+toggle = [True, True, True, 0] # 0:Leaderboard 1:FOV 2:LOS
 alphabet = list(string.ascii_uppercase)
 food_list = []
 organism_list = []
@@ -155,7 +155,7 @@ def render_leaderboard(screen):
         screen.blit(leaderboard_entry, (screen.get_width() - 150, 50 + i * 30))
 
 def menu_list():
-    leaderboard = pygame.Surface((130, 30))
+    leaderboard = pygame.Surface((125, 30))
     if toggle[0] == True: leaderboard.fill('green')
     else: leaderboard.fill('red')
     text_L = font.render("Leaderboard", True, (0, 0, 0))
@@ -167,17 +167,23 @@ def menu_list():
     text_FOV = font.render("Field of Vision", True, (0, 0, 0))
     field_of_vision.blit(text_FOV, (10,7))
 
-    line_of_sight = pygame.Surface((130, 30))
+    line_of_sight = pygame.Surface((120, 30))
     if toggle[2] == True: line_of_sight.fill('green')
     else: line_of_sight.fill('red')
     text_LOS = font.render("Line of Sight", True, (0, 0, 0))
     line_of_sight.blit(text_LOS, (10,7))
 
+    time_delay = pygame.Surface((160, 30))
+    time_delay.fill('blue')
+    text_TD = font.render("Time Delay: "+ str(toggle[3]) +"ms", True, (0, 0, 0))
+    time_delay.blit(text_TD, (10,7))
+
     while True:
+        screen.blit(menu_img, menu)
         screen.blit(leaderboard, (50, 100))
         screen.blit(field_of_vision, (50, 150))
         screen.blit(line_of_sight, (50, 200))
-        screen.blit(menu_img, menu)
+        screen.blit(time_delay, (50, 250))
 
         pygame.display.flip()
 
@@ -193,29 +199,34 @@ def menu_list():
                     if toggle[0] == True:
                         toggle[0] = False
                         leaderboard.fill('red')
-                        leaderboard.blit(text_L, (10,7))
                     else:
                         toggle[0] = True
                         leaderboard.fill('green')
-                        leaderboard.blit(text_L, (10,7))
+                    leaderboard.blit(text_L, (10,7))
                 elif field_of_vision.get_rect(topleft=(50,150)).collidepoint(x, y):
                     if toggle[1] == True:
                         toggle[1] = False
                         field_of_vision.fill('red')
-                        field_of_vision.blit(text_FOV, (10,7))
                     else:
                         toggle[1] = True
                         field_of_vision.fill('green')
-                        field_of_vision.blit(text_FOV, (10,7))
+                    field_of_vision.blit(text_FOV, (10,7))
                 elif line_of_sight.get_rect(topleft=(50,200)).collidepoint(x, y):
                     if toggle[2] == True:
                         toggle[2] = False
                         line_of_sight.fill('red')
-                        line_of_sight.blit(text_LOS, (10,7))
                     else:
                         toggle[2] = True
                         line_of_sight.fill('green')
-                        line_of_sight.blit(text_LOS, (10,7))
+                    line_of_sight.blit(text_LOS, (10,7))
+                elif time_delay.get_rect(topleft=(50, 250)).collidepoint(x, y):
+                    if toggle[3] < 50:
+                        toggle[3] += 5
+                    else:
+                        toggle[3] = 0
+                    time_delay.fill('blue')
+                    text_TD = font.render("Time Delay: "+ str(toggle[3]) +"ms", True, (0, 0, 0))
+                    time_delay.blit(text_TD, (10,7))
                 
 def main(genomes, config):
     nets = []
@@ -234,7 +245,7 @@ def main(genomes, config):
         new_organism = Organism()
         organism_list.append(new_organism)
 
-    for _ in range(2000):
+    for _ in range(5000):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -271,15 +282,15 @@ def main(genomes, config):
             if pos != -1:
                 food_list.pop(pos)
                 organism.food_consumed += 1
-                #organism.energy += 200
+                organism.energy += 200
                 ge[x].fitness += 1
             
-            '''
+            
             organism.energy -= 1
             if organism.energy < 0 and len(organism_list)> 5:
                 organism_list.pop(x)
                 nets.pop(x)
-                ge.pop(x)'''
+                ge.pop(x)
 
         for food in food_list:
             food.draw()
@@ -293,7 +304,7 @@ def main(genomes, config):
         generation_text = font.render(f"Gen {gen_count}", True, (255, 255, 255))
         screen.blit(generation_text, (20, screen.get_height() - 30))
         pygame.display.flip()
-        #pygame.time.delay(10)
+        pygame.time.delay(toggle[3])
 
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
