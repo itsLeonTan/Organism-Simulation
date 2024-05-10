@@ -59,7 +59,7 @@ class Organism:
         self.search_radius = 200  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
-        self.energy = 1000
+        self.energy = 500
 
     def movement(self):
         self.tail_segments.append((self.rect.x + self.radius, self.rect.y + self.radius))
@@ -267,9 +267,9 @@ def main(genomes, config):
             organism.draw()
 
             output = nets[x].activate((dif/90, food_min_distance/organism.search_radius))
-            if output[0] < -0.8:
+            if output[0] < -0.2:
                 organism.turn = -1
-            elif output[0] > 0.8:
+            elif output[0] > 0.2:
                 organism.turn = 1
             else:
                 organism.turn = 0
@@ -282,7 +282,7 @@ def main(genomes, config):
             if pos != -1:
                 food_list.pop(pos)
                 organism.food_consumed += 1
-                organism.energy += 200
+                organism.energy += 100
                 ge[x].fitness += 1
             
             
@@ -312,7 +312,8 @@ def run(config_path):
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(main,1000)
+    winner = p.run(main,100)
+    print (winner)
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)

@@ -29,7 +29,7 @@ compatibility_disjoint_coefficient = 1.0
 compatibility_weight_coefficient   = 0.5
 
 # connection add/remove rates
-conn_add_prob           = 0.3
+conn_add_prob           = 0.5
 conn_delete_prob        = 0.025
 
 # connection enable options
@@ -40,7 +40,7 @@ feed_forward            = True
 initial_connection      = unconnected
 
 # node add/remove rates
-node_add_prob           = 0.2
+node_add_prob           = 0.05
 node_delete_prob        = 0.05
 
 # network parameters
@@ -62,9 +62,9 @@ weight_init_mean        = 0.0
 weight_init_stdev       = 0.5
 weight_max_value        = 30
 weight_min_value        = -30
-weight_mutate_power     = 0.1
-weight_mutate_rate      = 0.5
-weight_replace_rate     = 0.05
+weight_mutate_power     = 0.3
+weight_mutate_rate      = 0.6
+weight_replace_rate     = 0.1
 
 [DefaultSpeciesSet]
 compatibility_threshold = 3.0
