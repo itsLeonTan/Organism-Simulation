@@ -4,7 +4,7 @@
 
 Built to better understand the NEAT algorithm and to simulate a simple neural network that mimic the cognitive ability of primitive organism such as the C. elegans roundworm.
 <p align='center'>
-<img src='assets/organism.gif' width=300><br/>
+<img src='organism.gif' width=300><br/>
 <i>Result</i>
 </p>
 
