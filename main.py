@@ -1,4 +1,3 @@
-import neat.population
 import pygame
 import random
 import math
@@ -11,7 +10,7 @@ pygame.display.set_caption("Organism Simulation")
 font = pygame.font.Font(None, 24)
 base_screen_width = 960  # Original window size
 base_screen_height = 600  # Original window size
-scale_factor = 3  # Scale factor for pixel density
+scale_factor = 1  # Scale factor for pixel density
 habitat_screen_width = base_screen_width * scale_factor
 habitat_screen_height = base_screen_height * scale_factor
 
@@ -45,18 +44,18 @@ class Organism:
         self.b = random.randint(100, 255)
         self.radius_color = (self.r, self.g, self.b)
         #Properties
-        self.radius = 20  # Radius of the circular organism
+        self.radius = 5  # Radius of the circular organism
         self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius*2), (habitat_screen_height/2 - self.radius), self.radius*2, self.radius*2)
         self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
-        self.tail_length = 10  # Number of segments in the tail
+        self.tail_length = 5  # Number of segments in the tail
         self.tail_segments = []  # List to store previous positions for the tail
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
         self.turn = 0 # (-1: left) (0: center) (1: right)
-        self.step_size = 10
+        self.step_size = 2
         self.move = False
         #Senses
-        self.search_radius = 200  # Radius within which to search for food
+        self.search_radius = 50  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
         self.energy = 500
@@ -119,18 +118,18 @@ class Organism:
 
     def draw(self):
         for i, segment in enumerate(self.tail_segments):
-            size = i*2
+            size = (i / self.tail_length) * self.radius
             pygame.draw.circle(habitat_surface, self.radius_color, segment, size) # draw tail
         pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if toggle[1] == True:
-            pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 5)  # draw search radius
+            pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 1)  # draw search radius
         if self.closest_food != None and toggle[2] == True:
-            pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 5)
+            pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 1)
 
 class Food:
     def __init__(self):
-        self.radius = 10  # Radius of the circular food
+        self.radius = 2  # Radius of the circular food
         self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius * 2),
                                 random.randint(0, habitat_screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
         self.radius_color = (255, 0, 0)
@@ -225,7 +224,7 @@ def menu_list():
                     else:
                         toggle[3] = 0
                     time_delay.fill('blue')
-                    text_TD = font.render("Time Delay: "+ str(toggle[3]) +"ms", True, (0, 0, 0))
+                    text_TD = font.render("Time Delay: " + str(toggle[3]) + "ms", True, (0, 0, 0))
                     time_delay.blit(text_TD, (10,7))
                 
 def main(genomes, config):
@@ -245,7 +244,7 @@ def main(genomes, config):
         new_organism = Organism()
         organism_list.append(new_organism)
 
-    for _ in range(5000):
+    for _ in range(10000):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -255,7 +254,7 @@ def main(genomes, config):
                 if menu.collidepoint(x, y):
                     menu_list()
 
-        if len(organism_list) <= 5:
+        if len(organism_list) < 1:
             continue
 
         habitat_surface.fill((0, 0, 0))  # Clear the habitat surface
@@ -287,7 +286,7 @@ def main(genomes, config):
             
             
             organism.energy -= 1
-            if organism.energy < 0 and len(organism_list)> 5:
+            if organism.energy < 0:
                 organism_list.pop(x)
                 nets.pop(x)
                 ge.pop(x)
@@ -312,7 +311,7 @@ def run(config_path):
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(main,100)
+    winner = p.run(main, 100)
     print (winner)
 
 if __name__ == "__main__":
