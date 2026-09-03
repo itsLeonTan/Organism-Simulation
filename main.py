@@ -8,9 +8,9 @@ import string
 pygame.init()
 pygame.display.set_caption("Organism Simulation")
 font = pygame.font.Font(None, 24)
-base_screen_width = 960  # Original window size
+base_screen_width = 1024  # Original window size
 base_screen_height = 600  # Original window size
-scale_factor = 1  # Scale factor for pixel density
+scale_factor = 3  # Scale factor for pixel density
 habitat_screen_width = base_screen_width * scale_factor
 habitat_screen_height = base_screen_height * scale_factor
 
@@ -44,18 +44,18 @@ class Organism:
         self.b = random.randint(100, 255)
         self.radius_color = (self.r, self.g, self.b)
         #Properties
-        self.radius = 5  # Radius of the circular organism
+        self.radius = 20  # Radius of the circular organism
         self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius*2), (habitat_screen_height/2 - self.radius), self.radius*2, self.radius*2)
         self.name = map_number_to_letter(self.r) + map_number_to_letter(self.g) + map_number_to_letter(self.b)
-        self.tail_length = 5  # Number of segments in the tail
+        self.tail_length = 10  # Number of segments in the tail
         self.tail_segments = []  # List to store previous positions for the tail
         #Movement
         self.angle = random.randint(0, 360)  # Initial random angle
         self.turn = 0 # (-1: left) (0: center) (1: right)
-        self.step_size = 2
+        self.step_size = 10
         self.move = False
         #Senses
-        self.search_radius = 50  # Radius within which to search for food
+        self.search_radius = 250  # Radius within which to search for food
         self.closest_food = None
         self.food_consumed = 0  # Track food consumed
         self.energy = 500
@@ -123,13 +123,13 @@ class Organism:
         pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)  # Draw organism
 
         if toggle[1] == True:
-            pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 1)  # draw search radius
+            pygame.draw.arc(habitat_surface, (255, 255, 255), self.rect.inflate(self.search_radius*1.5, self.search_radius*1.5), math.radians(-self.angle-90), math.radians(-self.angle+90), 3)  # draw search radius
         if self.closest_food != None and toggle[2] == True:
-            pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 1)
+            pygame.draw.line(habitat_surface, (255, 255, 255), (self.rect.x + self.radius, self.rect.y + self.radius), (self.closest_food.rect.x + self.closest_food.radius, self.closest_food.rect.y + self.closest_food.radius), 3)
 
 class Food:
     def __init__(self):
-        self.radius = 2  # Radius of the circular food
+        self.radius = 10  # Radius of the circular food
         self.rect = pygame.Rect(random.randint(0, habitat_screen_width - self.radius * 2),
                                 random.randint(0, habitat_screen_height - self.radius * 2), self.radius * 2, self.radius * 2)
         self.radius_color = (255, 0, 0)
@@ -138,7 +138,7 @@ class Food:
         pygame.draw.circle(habitat_surface, self.radius_color, (self.rect.x + self.radius, self.rect.y + self.radius), self.radius)        
 
 def generate_food():
-    num_food = 50
+    num_food = 20
 
     for _ in range(num_food - len(food_list)):
         new_food = Food()
@@ -311,7 +311,7 @@ def run(config_path):
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(main, 100)
+    winner = p.run(main, 1000)
     print (winner)
 
 if __name__ == "__main__":
